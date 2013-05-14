@@ -11,8 +11,7 @@ This script then reads that file, I plan to handle this within the script shortl
 
 Cron tab has the following (replace [APIKEY] with your API key)
 
-
-*/5 * * * * wget "https://www.btcguild.com/api.php?api_key=[APIKEY]" -O /tmp/btc.json &> /dev/null
+	*/5 * * * * wget "https://www.btcguild.com/api.php?api_key=[APIKEY]" -O /tmp/btc.json &> /dev/null
 
 
 
