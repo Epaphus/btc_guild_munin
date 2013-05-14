@@ -10,6 +10,8 @@ To get around this for now I have setup a cron job which downloads the json outp
 This script then reads that file, I plan to handle this within the script shortly
 
 Cron tab has the following (replace [APIKEY] with your API key)
+
+
 */5 * * * * wget "https://www.btcguild.com/api.php?api_key=[APIKEY]" -O /tmp/btc.json &> /dev/null
 
 
