@@ -1,22 +1,73 @@
 #!/usr/bin/env /usr/local/bin/ruby
 require 'json'
+require "net/https"
+require "uri"
 
-# BTC Guild limits API calls, due to the way Munin works this means we can get the config but then get an API error when it goes to get the data
-# To get around this for now I have setup a cron job which downloads the json output from the API every 5 mins
-# This script then reads that file, I plan to handle this within the script shortly
-#
-# Cron tab has the following
-# */5 * * * * wget "https://www.btcguild.com/api.php?api_key=[APIKEY]" -O /tmp/btc.json &> /dev/null
-#
-#
- 
-# Set /tmp/btc.json to path where you have put the BTC guild API output
-response = File.read("/tmp/btc.json")
-parsed = JSON.parse(response)
+apikey = ENV.member?('apikey') ? ENV['apikey']: "notset"
+statedir = ENV.member?('MUNIN_PLUGSTATE') ? ENV['MUNIN_PLUGSTATE']: "/var/lib/munin-node/plugin-state"
+statefile = "#{statedir}/btcguild_#{apikey}"
+
+# Bomb out of if the API hasn't been set
+if apikey == "notset"
+    puts "API key not set, Please set API Key in your Munin config"
+    exit 1
+end
+
+# API request
+def getrequest(apikey)
+  begin
+      uri = URI.parse("https://www.btcguild.com/api.php?api_key=#{apikey}")
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = true
+      http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+      request = Net::HTTP::Get.new(uri.request_uri)
+      httpdata = http.request(request)
+      return httpdata.body
+  end rescue begin
+      puts "Problem with API request"
+      exit 1   
+  end 
+end
+
+# Check to see if state file exists and read from it if it is less than 30 secs old
+# otherwise get data from the BTC Guild API
+if File.exists?(statefile)
+  if (File.mtime(statefile) < Time.now - 30)
+    response = getrequest(apikey)
+  else
+    response = File.read(statefile)
+  end
+else
+  response = getrequest(apikey)
+end
+
+# BTC Guild API has a rate limit, if we this then read from cached file.
+if response == "You have made too many API requests recently. API calls are limited to once every 15 seconds."
+  puts "too many API requests"
+  puts response
+  puts ""
+  if File.exists?(statefile)
+    response = File.read(statefile)
+  else
+    puts "Too many API requests and no cached data, unable to continue"
+    exit 1
+  end
+  
+end
+
+# Make sure we can parse the data before we continue
+if parsed = JSON.parse(response) then
+  file = File.open(statefile, "w")
+  file.write(response)
+  file.close 
+else
+  puts "Unable to get parsable data from API or Cache"
+  exit 1
+end
 
 
 
-
+# output Munin graph config if requested
 if ARGV[0] == "config"
   puts "multigraph pool_speed
 graph_title Pool performance
@@ -50,7 +101,7 @@ graph_category BTC
 graph_vlabel Hashes per second"
 count = 1
 parsed["workers"].each do |worker|
-  puts "#{worker[count]["worker_name"]}_hashrate.type COUNTER"
+  puts "#{worker[count]["worker_name"]}_hashrate.type GAUGE"
   puts "#{worker[count]["worker_name"]}_hashrate.draw LINE1"
   puts "#{worker[count]["worker_name"]}_hashrate.label #{worker[count]["worker_name"]} Hash Rate"
   puts "#{worker[count]["worker_name"]}_validshare.type COUNTER"
@@ -74,7 +125,7 @@ parsed["workers"].each do |worker|
   puts "graph_category BTC"
   puts "graph_vlabel Hashes per second"
   puts "graph_args --base 1000"
-  puts "hashrate.type COUNTER"
+  puts "hashrate.type GAUGE"
   puts "hashrate.draw LINE1"
   puts "hashrate.label Hash Rate"
   puts "validshare.type COUNTER"
@@ -97,6 +148,7 @@ end
 exit  
 end
 
+#output graph data
 puts "multigraph pool_speed
 pool_speed.value #{parsed["pool"]["pool_speed"]}
 
