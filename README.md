@@ -16,7 +16,7 @@ The plugin currently gets the following information
 * Earnings
 * BTC Guild Pool Speed
 * Worker Hashrate per worker
-* Share stats per worker (Vailid, Dupe, Stale, Unknown)
+* Share stats per worker (Valid, Dupe, Stale, Unknown)
  
 
 
