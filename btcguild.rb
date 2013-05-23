@@ -19,13 +19,18 @@ def getrequest(apikey)
       uri = URI.parse("https://www.btcguild.com/api.php?api_key=#{apikey}")
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
+      http.read_timeout = 30
       http.verify_mode = OpenSSL::SSL::VERIFY_NONE
       request = Net::HTTP::Get.new(uri.request_uri)
       httpdata = http.request(request)
       return httpdata.body
   end rescue begin
+    if File.exists?(statefile)
+      response = File.read(statefile)
+    else
       puts "Problem with API request"
-      exit 1   
+      exit 1
+    end   
   end 
 end
 

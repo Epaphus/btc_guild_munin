@@ -9,6 +9,7 @@ To use you will need your API key from the BTC Guild website and put the followi
 
 	[btcguild]
 	env.apikey yourkey
+	timeout 40
 
 
 The plugin currently gets the following information
@@ -19,4 +20,5 @@ The plugin currently gets the following information
 * Share stats per worker (Valid, Dupe, Stale, Unknown)
  
 
+2013-05-23: Added a timeout to the munin-node config and in plugin as sometimes the BTC guild website takes longer than the default timeout which caused gaps in the graph.
 
